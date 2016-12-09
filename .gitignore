@@ -1,3 +1,4 @@
+simple_httpd_daemon_with_cgi.error.log
 /blib/
 /.build/
 _build/
