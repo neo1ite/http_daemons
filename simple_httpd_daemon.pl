@@ -8,14 +8,24 @@ use LWP 5.23;
 use HTTP::Daemon;
 use Sys::Hostname;
 
-use constant DOCUMENT_ROOT => './www';
-use constant SCRIPT_PATH   => './www/cgi-bin';
-use constant CRLF          => "\015\012";
+use constant DEBUG          => 0;
 
-print "Starting server...\n";
-my $server = HTTP::Daemon->new(LocalAddr => 'localhost', Timout => 60, LocalPort => 80);
+use constant SERVER_ADDR    => 'localhost';
+use constant SERVER_PORT    => 80;
+use constant SERVER_TIMEOUT => 60;
 
-print "Server started successfully. Wating for connection...\n";
+use constant DOCUMENT_ROOT  => './www';
+
+use constant CRLF           => "\015\012";
+
+print "Starting server...\n" if DEBUG;
+my $server = HTTP::Daemon->new(
+   LocalAddr => SERVER_ADDR,
+   LocalPort => SERVER_PORT,
+   Timout    => SERVER_TIMEOUT
+) or die "Can't create server: $!";
+
+print "Server started successfully. Wating for connection...\n" if DEBUG;
 while (my $client = $server->accept) {
    while (my $request = $client->get_request) {
       if ($request->method eq 'GET') {
@@ -25,17 +35,18 @@ while (my $client = $server->accept) {
          if (-d DOCUMENT_ROOT . $path && $path !~ /\/$/)
          {
             my $url = 'http://' . $server_name . $path . '/';
-            #print "Redirecting to $url\n";
-            $client->send_redirect($url)
+            print "Redirecting to $url\n" if DEBUG;
+            $client->send_redirect($url);
          }
 
          $path = (-d DOCUMENT_ROOT . $path && -f DOCUMENT_ROOT . $path . 'index.html')
             ? DOCUMENT_ROOT . $path . 'index.html'
             : DOCUMENT_ROOT . $path;
 
-         if (-d $path) { $client->send_error(403); }
-         if (-f $path) {
-            #print "Sending file $path\n";
+         if (-d $path) {
+            $client->send_error(403);
+         } elsif (-f $path) {
+            print "Sending file $path\n" if DEBUG;
             $client->send_file_response($path);
          } else {
             $client->send_error(404);
